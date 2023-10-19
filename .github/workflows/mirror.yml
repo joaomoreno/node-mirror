@@ -14,8 +14,8 @@ jobs:
       - run: |
           set -e
           gpg --keyserver hkps://keys.openpgp.org --recv-keys 4ED778F539E3634C779C87C6D7062848A1AB005C
-          curl -O https://nodejs.org/dist/${{ github.event.inputs.version }}/SHASUMS256.txt
-          curl -O https://nodejs.org/dist/${{ github.event.inputs.version }}/SHASUMS256.txt.sig
+          curl -O https://nodejs.org/dist/v${{ github.event.inputs.version }}/SHASUMS256.txt
+          curl -O https://nodejs.org/dist/v${{ github.event.inputs.version }}/SHASUMS256.txt.sig
           gpg --verify SHASUMS256.txt.sig SHASUMS256.txt
 
           while read -r line; do
@@ -26,7 +26,7 @@ jobs:
               continue
             fi
 
-            curl -O https://nodejs.org/dist/${{ github.event.inputs.version }}/$file
+            curl -O https://nodejs.org/dist/v${{ github.event.inputs.version }}/$file
             echo "$hash $file" | sha256sum -c -
           done < SHASUMS256.txt
 
