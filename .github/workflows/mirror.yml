@@ -1,0 +1,44 @@
+name: Mirror Node.JS
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Node.JS version'
+        required: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - checkout: none
+      - run: |
+          set -e
+          gpg --keyserver hkps://keys.openpgp.org --recv-keys 4ED778F539E3634C779C87C6D7062848A1AB005C
+          curl -O https://nodejs.org/dist/${{ github.event.inputs.version }}/SHASUMS256.txt
+          curl -O https://nodejs.org/dist/${{ github.event.inputs.version }}/SHASUMS256.txt.sig
+          gpg --verify SHASUMS256.txt.sig SHASUMS256.txt
+
+          while read -r line; do
+            hash=$(echo $line | cut -d ' ' -f 1)
+            file=$(echo $line | cut -d ' ' -f 2)
+
+            if [[ $file == */* ]]; then
+              continue
+            fi
+
+            curl -O https://nodejs.org/dist/${{ github.event.inputs.version }}/$file
+            echo "$hash $file" | sha256sum -c -
+          done < SHASUMS256.txt
+
+      # - name: Create Release
+      #   uses: actions/create-release@v1
+      #   id: create_release
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #   with:
+      #     tag_name: ${{ github.event.inputs.version }}
+      #     release_name: ${{ github.event.inputs.version }}
+      #     draft: false
+      #     prerelease: false
+
