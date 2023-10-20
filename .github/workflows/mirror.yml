@@ -40,6 +40,9 @@ jobs:
               continue
             fi
 
+            mkdir -p $version
+            pushd $version
+
             curl --no-progress-meter -O https://nodejs.org/dist/$version/SHASUMS256.txt
             curl --no-progress-meter -O https://nodejs.org/dist/$version/SHASUMS256.txt.sig
             gpg --verify SHASUMS256.txt.sig SHASUMS256.txt
@@ -60,6 +63,8 @@ jobs:
 
             gh release create $version $files
             echo "Release $version already exists"
+
+            popd
           done
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
