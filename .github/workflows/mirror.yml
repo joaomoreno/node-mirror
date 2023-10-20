@@ -1,7 +1,8 @@
 name: Mirror Node.JS
 
 on:
-  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * *' # every day, midnight
 
 jobs:
   build:
@@ -62,7 +63,7 @@ jobs:
             done < SHASUMS256.txt
 
             gh release create $version $files
-            echo "Release $version already exists"
+            echo "Successfully created release $version"
 
             popd
           done
