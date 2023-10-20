@@ -2,10 +2,6 @@ name: Mirror Node.JS
 
 on:
   workflow_dispatch:
-    inputs:
-      version:
-        description: 'Node.JS version'
-        required: true
 
 jobs:
   build:
@@ -27,24 +23,43 @@ jobs:
           gpg --keyserver hkps://keys.openpgp.org --recv-keys 108F52B48DB57BB0CC439B2997B01419BD92F80A
           gpg --keyserver hkps://keys.openpgp.org --recv-keys A363A499291CBBC940DD62E41F10027AF002F8B0
 
-          curl -O https://nodejs.org/dist/v${{ github.event.inputs.version }}/SHASUMS256.txt
-          curl -O https://nodejs.org/dist/v${{ github.event.inputs.version }}/SHASUMS256.txt.sig
-          gpg --verify SHASUMS256.txt.sig SHASUMS256.txt
+          curl --no-progress-meter -O https://nodejs.org/dist/index.json
 
-          files="SHASUMS256.txt SHASUMS256.txt.sig"
-          while read -r line; do
-            hash=$(echo $line | cut -d ' ' -f 1)
-            file=$(echo $line | cut -d ' ' -f 2)
+          versions=$(cat << EOF | node
+          const fs = require('fs');
+          const builds = JSON.parse(fs.readFileSync('index.json', 'utf8'));
+          const versions = builds.map(build => build.version)
+            .filter(version => parseInt(/^v(\d+)\./.exec(version)[1]) >= 18);
+          console.log(versions.join('\n'));
+          EOF
+          )
 
-            if [[ $file == */* ]]; then
+          for version in $versions; do
+            if gh release view $version; then
+              echo "Release $version already exists"
               continue
             fi
 
-            curl -O https://nodejs.org/dist/v${{ github.event.inputs.version }}/$file
-            echo "$hash $file" | sha256sum -c -
-            files="$files $file"
-          done < SHASUMS256.txt
+            curl --no-progress-meter -O https://nodejs.org/dist/$version/SHASUMS256.txt
+            curl --no-progress-meter -O https://nodejs.org/dist/$version/SHASUMS256.txt.sig
+            gpg --verify SHASUMS256.txt.sig SHASUMS256.txt
 
-          gh release create v${{ github.event.inputs.version }} $files
+            files="SHASUMS256.txt SHASUMS256.txt.sig"
+            while read -r line; do
+              hash=$(echo $line | cut -d ' ' -f 1)
+              file=$(echo $line | cut -d ' ' -f 2)
+
+              if [[ $file == */* ]]; then
+                continue
+              fi
+
+              curl --no-progress-meter -O https://nodejs.org/dist/$version/$file
+              echo "$hash $file" | sha256sum -c -
+              files="$files $file"
+            done < SHASUMS256.txt
+
+            gh release create $version $files
+            echo "Release $version already exists"
+          done
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
