@@ -24,8 +24,7 @@ jobs:
             890C08DB8579162FEE0DF9DB8BEAB4DFCF555EF4 \
             C82FA3AE1CBEDC6BE46B9360C43CEC45C17AB93C \
             108F52B48DB57BB0CC439B2997B01419BD92F80A \
-            A363A499291CBBC940DD62E41F10027AF002F8B0 \
-            61FC681DFB92A079F1685E77973F295594EC4689
+            A363A499291CBBC940DD62E41F10027AF002F8B0
 
           curl --no-progress-meter -O https://nodejs.org/dist/index.json
 
@@ -39,7 +38,7 @@ jobs:
           )
 
           for version in $versions; do
-            if gh release view $version; then
+            if gh release view $version > /dev/null; then
               echo "Release $version already exists"
               continue
             fi
@@ -49,7 +48,11 @@ jobs:
 
             curl --no-progress-meter -O https://nodejs.org/dist/$version/SHASUMS256.txt
             curl --no-progress-meter -O https://nodejs.org/dist/$version/SHASUMS256.txt.sig
-            gpg --verify SHASUMS256.txt.sig SHASUMS256.txt
+
+            if ! gpg --verify SHASUMS256.txt.sig SHASUMS256.txt; then
+              echo "Skipping $version since signature verification failed"
+              continue
+            fi
 
             files="SHASUMS256.txt SHASUMS256.txt.sig"
             while read -r line; do
